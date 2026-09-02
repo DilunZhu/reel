@@ -12,6 +12,7 @@ const DAYS_AHEAD = 30;
 const RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 const REQUEST_DELAY_MS = 500;
+const BEIJING_OFFSET_MS = 8 * 3600 * 1000;
 
 function escapeIcs(str) {
   if (!str) return '';
@@ -47,6 +48,48 @@ function toIcsDateTime(dateStr) {
   return year + month + day + 'T' + hour + minute + second + 'Z';
 }
 
+// Resolve the true airing instant for an episode.
+// TVmaze returns real timestamps for linear-TV shows (schedule.time set),
+// but for streaming shows it uses a 12:00 UTC placeholder that does NOT
+// reflect the actual release moment. Correct those using per-platform
+// release times (local airing date + known drop time), so the Beijing-date
+// conversion below lands on the right calendar day.
+function resolveAirInstant(show, ep) {
+  const stamp = ep.airstamp ? new Date(ep.airstamp) : null;
+  if (!stamp || isNaN(stamp.getTime())) return null;
+  const hasRealTime = show.schedule && show.schedule.time;
+  if (hasRealTime) return stamp;
+
+  const isNoonUtcPlaceholder = stamp.getUTCHours() === 12 && stamp.getUTCMinutes() === 0;
+  if (!isNoonUtcPlaceholder) return stamp;
+
+  const channel = (show.network && show.network.name) ||
+    (show.webChannel && show.webChannel.name) || '';
+  const airdate = ep.airdate; // 'YYYY-MM-DD', the show's local airing date
+  if (!airdate) return stamp;
+
+  if (/hbo|max/i.test(channel)) {
+    // Max/HBO originals drop 21:00 ET on the local airing date
+    // = 01:00 UTC the next (UTC) day
+    return new Date(new Date(airdate + 'T00:00:00Z').getTime() + 25 * 3600 * 1000);
+  }
+  if (/apple/i.test(channel)) {
+    // Apple TV+ originals drop 00:01 ET on the local airing date
+    // = 04:01 UTC the same (UTC) day
+    return new Date(airdate + 'T04:01:00Z');
+  }
+  return stamp;
+}
+
+// Format an instant as the Beijing (UTC+8) calendar date, e.g. '20260904'
+function toBeijingDateString(instant) {
+  const d = new Date(instant.getTime() + BEIJING_OFFSET_MS);
+  const year = String(d.getUTCFullYear());
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return year + month + day;
+}
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -78,28 +121,30 @@ async function fetchShowWithEpisodes(showId) {
 
 function getUpcomingEpisodes(show, daysAhead = DAYS_AHEAD) {
   if (!show || !show._embedded || !show._embedded.episodes) return [];
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() + daysAhead);
+  // Use the Beijing calendar day as the reference boundary
+  const nowBeijing = new Date(Date.now() + BEIJING_OFFSET_MS);
+  nowBeijing.setUTCHours(0, 0, 0, 0);
+  const startMs = nowBeijing.getTime() - BEIJING_OFFSET_MS; // Beijing midnight in UTC
+  const cutoffMs = startMs + daysAhead * 24 * 3600 * 1000;
 
-  const eps = show._embedded.episodes.filter(ep => {
-    if (!ep.airstamp) return false;
-    const airDate = new Date(ep.airstamp);
-    return airDate >= now && airDate <= cutoff;
-  });
+  const withInstant = show._embedded.episodes
+    .map(ep => ({ ep, instant: resolveAirInstant(show, ep) }))
+    .filter(({ ep, instant }) => instant && ep.airstamp)
+    .filter(({ instant }) => instant.getTime() >= startMs && instant.getTime() <= cutoffMs);
 
-  return eps.sort((a, b) => new Date(a.airstamp) - new Date(b.airstamp));
+  return withInstant
+    .map(({ ep, instant }) => ({ ...ep, _airInstant: instant }))
+    .sort((a, b) => new Date(a.airstamp) - new Date(b.airstamp));
 }
 
 function generatePlaceholderEvent() {
   const lines = [];
-  const now = new Date();
-  const nowStr = toIcsDateTime(now.toISOString());
+  const todayBeijing = toBeijingDateString(new Date());
+  const tomorrowBeijing = toBeijingDateString(new Date(Date.now() + 24 * 3600 * 1000));
   lines.push('BEGIN:VEVENT');
   lines.push('UID:refresh-note@reel-app');
-  lines.push('DTSTART:' + nowStr);
-  lines.push('DTEND:' + nowStr);
+  lines.push(`DTSTART;VALUE=DATE:${todayBeijing}`);
+  lines.push(`DTEND;VALUE=DATE:${tomorrowBeijing}`);
   lines.push('SUMMARY:' + escapeIcs('Reel Calendar 已更新'));
   lines.push('DESCRIPTION:' + escapeIcs('此ICS文件由Reel应用自动生成。\n请通过Reel应用添加关注的剧集以获取个性化日历更新。\n将关注列表同步到 watchlist.json 后，GitHub Actions 会生成真实追剧日程。'));
   lines.push('END:VEVENT');
@@ -151,21 +196,20 @@ async function main() {
   lines.push('CALSCALE:GREGORIAN');
   lines.push('METHOD:PUBLISH');
   lines.push('X-WR-CALNAME:Reel 剧集更新');
-  lines.push('X-WR-TIMEZONE:UTC');
+  lines.push('X-WR-TIMEZONE:Asia/Shanghai');
 
   let eventCount = 0;
 
   for (const show of shows) {
     const upcomingEps = getUpcomingEpisodes(show);
     for (const ep of upcomingEps) {
-      const dtStart = toIcsDateTime(ep.airstamp);
+      // All-day event on the Beijing calendar date of the (resolved) airing
+      const startInstant = ep._airInstant || new Date(ep.airstamp);
+      const dtStart = toBeijingDateString(startInstant);
       if (!dtStart) continue;
-
-      // Approximate end time (start + runtime, default 60 min)
-      const runtime = ep.runtime || 60;
-      const startDate = new Date(ep.airstamp);
-      const endDate = new Date(startDate.getTime() + runtime * 60000);
-      const dtEnd = toIcsDateTime(endDate.toISOString());
+      // DTEND is the exclusive end: the following calendar day
+      const nextDay = new Date(startInstant.getTime() + 24 * 3600 * 1000);
+      const dtEnd = toBeijingDateString(nextDay);
 
       const uid = `ep-${ep.id}-${ep.airstamp}@reel-app`;
       const summary = escapeIcs(show.name) + '丨S' + ep.season + 'E' + ep.number;
@@ -191,8 +235,8 @@ async function main() {
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);
-      lines.push(`DTSTART:${dtStart}`);
-      lines.push(`DTEND:${dtEnd}`);
+      lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
+      lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
       lines.push(`SUMMARY:${summary}`);
       lines.push(`DESCRIPTION:${description}`);
       if (show.url) {
