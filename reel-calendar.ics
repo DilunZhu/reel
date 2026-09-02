@@ -6,58 +6,11 @@ METHOD:PUBLISH
 X-WR-CALNAME:Reel 剧集更新
 X-WR-TIMEZONE:UTC
 BEGIN:VEVENT
-UID:ep-3605511-2026-09-02T12:00:00+00:00@reel-app
-DTSTART:20260902T120000Z
-DTEND:20260902T124800Z
-SUMMARY:Ted Lasso丨S4E5
-DESCRIPTION:剧集: Ted Lasso\n季: 4\n集: 5\n标题: Riches of Embarrassment\nTed Las
- so centers on an idealistic — and clueless — all-American football coach hi
- red to manage an English football club — despite having no soccer coaching 
- experience at all.
-URL:https://www.tvmaze.com/shows/44458/ted-lasso
-END:VEVENT
-BEGIN:VEVENT
-UID:ep-3605512-2026-09-09T12:00:00+00:00@reel-app
-DTSTART:20260909T120000Z
-DTEND:20260909T124600Z
-SUMMARY:Ted Lasso丨S4E6
-DESCRIPTION:剧集: Ted Lasso\n季: 4\n集: 6\n标题: Don't Jump Around Much Anymore\n
- Ted Lasso centers on an idealistic — and clueless — all-American football c
- oach hired to manage an English football club — despite having no soccer co
- aching experience at all.
-URL:https://www.tvmaze.com/shows/44458/ted-lasso
-END:VEVENT
-BEGIN:VEVENT
-UID:ep-3605513-2026-09-16T12:00:00+00:00@reel-app
-DTSTART:20260916T120000Z
-DTEND:20260916T130000Z
-SUMMARY:Ted Lasso丨S4E7
-DESCRIPTION:剧集: Ted Lasso\n季: 4\n集: 7\n标题: Episode 7\nTed Lasso centers on 
- an idealistic — and clueless — all-American football coach hired to manage 
- an English football club — despite having no soccer coaching experience at 
- all.
-URL:https://www.tvmaze.com/shows/44458/ted-lasso
-END:VEVENT
-BEGIN:VEVENT
-UID:ep-3605514-2026-09-23T12:00:00+00:00@reel-app
-DTSTART:20260923T120000Z
-DTEND:20260923T130000Z
-SUMMARY:Ted Lasso丨S4E8
-DESCRIPTION:剧集: Ted Lasso\n季: 4\n集: 8\n标题: Episode 8\nTed Lasso centers on 
- an idealistic — and clueless — all-American football coach hired to manage 
- an English football club — despite having no soccer coaching experience at 
- all.
-URL:https://www.tvmaze.com/shows/44458/ted-lasso
-END:VEVENT
-BEGIN:VEVENT
-UID:ep-3605515-2026-09-30T12:00:00+00:00@reel-app
-DTSTART:20260930T120000Z
-DTEND:20260930T130000Z
-SUMMARY:Ted Lasso丨S4E9
-DESCRIPTION:剧集: Ted Lasso\n季: 4\n集: 9\n标题: Episode 9\nTed Lasso centers on 
- an idealistic — and clueless — all-American football coach hired to manage 
- an English football club — despite having no soccer coaching experience at 
- all.
-URL:https://www.tvmaze.com/shows/44458/ted-lasso
+UID:refresh-note@reel-app
+DTSTART:20260902T091526Z
+DTEND:20260902T091526Z
+SUMMARY:Reel Calendar 已更新
+DESCRIPTION:此ICS文件由Reel应用自动生成。\n请通过Reel应用添加关注的剧集以获取个性化日历更新。\n将关注列表同步到 watch
+ list.json 后，GitHub Actions 会生成真实追剧日程。
 END:VEVENT
 END:VCALENDAR
