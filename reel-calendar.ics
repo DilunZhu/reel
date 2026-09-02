@@ -7,8 +7,8 @@ X-WR-CALNAME:Reel 剧集更新
 X-WR-TIMEZONE:UTC
 BEGIN:VEVENT
 UID:refresh-note@reel-app
-DTSTART:20260902T091526Z
-DTEND:20260902T091526Z
+DTSTART:20260902T093009Z
+DTEND:20260902T093009Z
 SUMMARY:Reel Calendar 已更新
 DESCRIPTION:此ICS文件由Reel应用自动生成。\n请通过Reel应用添加关注的剧集以获取个性化日历更新。\n将关注列表同步到 watch
  list.json 后，GitHub Actions 会生成真实追剧日程。
