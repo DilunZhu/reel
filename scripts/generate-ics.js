@@ -169,7 +169,25 @@ async function main() {
 
       const uid = `ep-${ep.id}-${ep.airstamp}@reel-app`;
       const summary = escapeIcs(show.name) + '丨S' + ep.season + 'E' + ep.number;
-      const description = escapeIcs(`剧集: ${show.name}\n季: ${ep.season}\n集: ${ep.number}\n标题: ${ep.name || 'N/A'}\n${show.summary ? show.summary.replace(/<[^>]+>/g, '') : ''}`);
+
+      // Line 1: episode title丨runtime (minutes)
+      const runtimeMin = ep.runtime || show.runtime || null;
+      const line1 = runtimeMin
+        ? `${ep.name || show.name}丨${runtimeMin}分钟`
+        : (ep.name || show.name);
+
+      // Line 2: season progress bar — this episode's position within its season
+      const seasonEps = (show._embedded.episodes || []).filter(e => e.season === ep.season);
+      const seasonTotal = seasonEps.length;
+      const epNumber = ep.number || 0;
+      let line2 = '';
+      if (seasonTotal > 0 && epNumber > 0) {
+        const filled = Math.min(epNumber, seasonTotal);
+        const bar = '■'.repeat(filled) + '□'.repeat(seasonTotal - filled);
+        line2 = `${bar} ${filled}/${seasonTotal}`;
+      }
+
+      const description = escapeIcs(line2 ? `${line1}\n${line2}` : line1);
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);
