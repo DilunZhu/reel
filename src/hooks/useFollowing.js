@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useLocalStorage } from './useLocalStorage'
+import { getShow } from '../utils/api'
 
 const STORAGE_KEY = 'reel_following'
 const GITHUB_TOKEN_KEY = 'reel_github_token'
@@ -17,6 +18,20 @@ export function useFollowing() {
       if (prev.some(s => s.id === show.id)) return prev
       return [...prev, { id: show.id, addedAt: new Date().toISOString(), ...show }]
     })
+    // Backfill full data (incl. _embedded.episodes) when the show object
+    // comes from search results, which lack episode data. Without this,
+    // the calendar and "next episode" grouping silently skip the show.
+    if (!show._embedded || !show._embedded.episodes) {
+      getShow(show.id)
+        .then(full => {
+          setFollowing(prev => prev.map(s =>
+            s.id === show.id ? { ...s, ...full, addedAt: s.addedAt } : s
+          ))
+        })
+        .catch(() => {
+          // keep partial data if the backfill fails; user can still unfollow/refollow
+        })
+    }
   }, [setFollowing])
 
   const removeFollowing = useCallback((showId) => {
@@ -109,6 +124,25 @@ export function useFollowing() {
 
     return true
   }, [githubToken, getWatchlistIds])
+
+  // Self-heal on mount: backfill any followed shows that are missing episode
+  // data (e.g. followed from search results before this fix existed), so the
+  // calendar and update grouping work for existing users without re-following.
+  useEffect(() => {
+    if (following.length === 0) return
+    const incomplete = following.filter(s => !s._embedded || !s._embedded.episodes)
+    if (incomplete.length === 0) return
+    for (const show of incomplete) {
+      getShow(show.id)
+        .then(full => {
+          setFollowing(prev => prev.map(s =>
+            s.id === show.id ? { ...s, ...full, addedAt: s.addedAt } : s
+          ))
+        })
+        .catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     following,
