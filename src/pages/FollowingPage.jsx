@@ -12,11 +12,10 @@ const SORT_OPTIONS = [
 ]
 
 export default function FollowingPage() {
-  const { following, removeFollowing, exportFollowing, importFollowing, syncToGitHub } = useFollowing()
+  const { following, removeFollowing, exportFollowing, importFollowing } = useFollowing()
   const [sortBy, setSortBy] = useState('added')
   const [importText, setImportText] = useState('')
   const [showImport, setShowImport] = useState(false)
-  const [syncing, setSyncing] = useState(false)
 
   const sortedFollowing = useMemo(() => {
     const arr = [...following]
@@ -86,30 +85,26 @@ export default function FollowingPage() {
     }
   }
 
-  const handleSyncToGitHub = async () => {
-    setSyncing(true)
+  // Export watchlist.json content: the plain ID array the repo's watchlist.json
+  // expects. Copies to clipboard first (paste directly into GitHub's web editor);
+  // falls back to a file download when clipboard is unavailable.
+  const handleExportWatchlist = async () => {
+    const ids = following.map(s => s.id)
+    const data = JSON.stringify(ids, null, 2)
     try {
-      // Parse owner/repo from current origin or prompt user
-      // For a static site, we don't have access to the repo info directly.
-      // We'll try to infer from the deployment URL or use a simple prompt.
-      const input = window.prompt('请输入 GitHub 仓库信息（格式: owner/repo，例如: myname/reel）')
-      if (!input) {
-        setSyncing(false)
-        return
-      }
-      const parts = input.trim().split('/')
-      if (parts.length !== 2) {
-        toast('格式错误，请使用 owner/repo 格式', 'error')
-        setSyncing(false)
-        return
-      }
-      const [owner, repo] = parts
-      await syncToGitHub(owner, repo)
-      toast('已成功同步到 GitHub', 'success')
-    } catch (err) {
-      toast(err.message || '同步失败', 'error')
-    } finally {
-      setSyncing(false)
+      await navigator.clipboard.writeText(data)
+      toast('watchlist.json 内容已复制，可直接粘贴到 GitHub 仓库', 'success')
+    } catch {
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'watchlist.json'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast('已下载 watchlist.json，内容可直接粘贴到 GitHub 仓库', 'success')
     }
   }
 
@@ -308,19 +303,19 @@ export default function FollowingPage() {
             导入
           </button>
           <button
-            onClick={handleSyncToGitHub}
-            disabled={syncing}
+            onClick={handleExportWatchlist}
+            title="导出 watchlist.json 所需的 ID 数组，可直接粘贴到 GitHub 仓库"
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              background: syncing ? 'var(--bg-tertiary)' : 'var(--accent)',
-              color: syncing ? 'var(--text-muted)' : '#000',
+              background: 'var(--accent)',
+              color: '#000',
               border: '1px solid var(--accent)',
               fontSize: 13,
               fontWeight: 600,
             }}
           >
-            {syncing ? '同步中...' : '同步到 GitHub'}
+            导出 watchlist.json
           </button>
         </div>
       </div>
