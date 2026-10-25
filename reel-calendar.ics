@@ -6,15 +6,6 @@ METHOD:PUBLISH
 X-WR-CALNAME:Reel 剧集更新
 X-WR-TIMEZONE:Asia/Shanghai
 BEGIN:VEVENT
-UID:ep-3780088-2026-10-24T00:30:00+00:00@reel-app
-DTSTART;VALUE=DATE:20261024
-DTEND;VALUE=DATE:20261025
-SUMMARY:KERORO☆丨S1E4
-DESCRIPTION:Ending the Century Once Mois with Angol Mois: Spending a Wonder
- ful Worldend with Uncle / The Rainy Season is a Bloodbath!丨30分钟\n■■■■□□ 4/6
-URL:https://www.tvmaze.com/shows/94848/keroro
-END:VEVENT
-BEGIN:VEVENT
 UID:ep-3780089-2026-10-31T00:30:00+00:00@reel-app
 DTSTART;VALUE=DATE:20261031
 DTEND;VALUE=DATE:20261101
